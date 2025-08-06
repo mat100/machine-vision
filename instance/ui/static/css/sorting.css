@@ -1,0 +1,72 @@
+/* Toast notifications */
+.toast { 
+    display: none; 
+}
+
+.toast.show { 
+    display: block; 
+}
+
+/* Image grid */
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .image-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .image-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .image-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Image card hover effects */
+.image-card {
+    transition: all 0.2s ease-in-out;
+}
+
+.image-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Selected state */
+.image-card.selected {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Button states */
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Bulk actions animation */
+.bulk-actions {
+    transition: all 0.3s ease-in-out;
+}
+
+.bulk-actions.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+} 

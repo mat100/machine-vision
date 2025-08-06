@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Collection - {{ config.name }}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="/static/lib/tailwind.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="/static/lib/htmx.min.js"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="/static/lib/alpine.min.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">{{ config.name }}</h1>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="/" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Dashboard
+                        </a>
+                        <a href="/data-collection" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Data Collection
+                        </a>
+                        <a href="/sorting" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Sorting
+                        </a>
+                        <a href="/training" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Training
+                        </a>
+                        <a href="/production" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Production
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" x-data="dataCollectionData()" x-init="init()">
+        <div class="px-4 py-6 sm:px-0">
+            <!-- Header -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">Data Collection</h1>
+                <p class="mt-2 text-gray-600">Capture images for training</p>
+            </div>
+
+            <!-- Data Collection Controls -->
+            <div class="bg-white shadow rounded-lg p-6 mb-8">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Capture Images</h2>
+                
+                <template x-if="!hasCamera">
+                    <div class="text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-500">No camera assigned to this instance</p>
+                        <p class="text-xs text-gray-400">Assign a camera in the Hub to enable capture</p>
+                    </div>
+                </template>
+                
+                <template x-if="hasCamera">
+                    <div>
+                        <!-- Capture Button -->
+                        <div class="mb-6">
+                            <button 
+                                @click="captureImage()"
+                                :disabled="capturing"
+                                class="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <svg x-show="!capturing" class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <svg x-show="capturing" class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="capturing ? 'Capturing...' : 'Capture Image'"></span>
+                            </button>
+                        </div>
+                        
+                        <!-- Class Assignment (shown after capture) -->
+                        <template x-if="lastCapturedImage">
+                            <div class="border-t pt-4" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform scale-100" x-transition:leave-end="opacity-0 transform scale-95">
+                                <h4 class="text-sm font-medium text-gray-900 mb-3">Assign or Change Class for Captured Image</h4>
+                                
+                                                                    <!-- Captured Image Preview -->
+                                    <div class="mb-4">
+                                        <div class="bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center" style="height: 400px;">
+                                            <img :src="`/images/${getFilenameFromPath(lastCapturedImage.image_path)}`" :alt="getFilenameFromPath(lastCapturedImage.image_path)" class="max-w-full max-h-full object-contain">
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-1" x-text="getFilenameFromPath(lastCapturedImage.image_path)"></p>
+                                    </div>
+                                
+                                <div class="grid grid-cols-3 gap-3">
+                                    <template x-for="class_name in classes" :key="class_name">
+                                        <button 
+                                            @click="assignClassToImage(class_name)"
+                                            class="px-4 py-3 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                                            <span x-text="class_name"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                                                                    <div class="mt-3">
+                                        <button 
+                                            @click="skipClassification()"
+                                            class="w-full px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-500 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                                            Skip/Reset Classification
+                                        </button>
+                                    </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Recent Images -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Recent Images</h2>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <template x-for="image in recentImages" :key="image.path">
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="aspect-w-1 aspect-h-1 bg-gray-200">
+                                    <img :src="`/images/${image.filename}`" :alt="image.filename" class="w-full h-48 object-cover">
+                                </div>
+                                <div class="p-3">
+                                    <p class="text-sm font-medium text-gray-900 truncate" x-text="image.filename"></p>
+                                    <p class="text-xs text-gray-500" x-text="formatDate(image.created_at)"></p>
+                                    <template x-if="image.class_name">
+                                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mt-1" x-text="image.class_name"></span>
+                                    </template>
+                                    <template x-if="!image.class_name">
+                                        <span class="inline-block bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded mt-1">Unclassified</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <template x-if="recentImages.length === 0">
+                        <div class="text-center py-12">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">No images yet</h3>
+                            <p class="mt-1 text-sm text-gray-500">Start by capturing or uploading some images.</p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast notifications -->
+    <div id="toast" class="fixed top-4 right-4 z-50" x-show="showToast" x-transition x-cloak>
+        <div class="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg x-show="toastType === 'success'" class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <svg x-show="toastType === 'error'" class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                    </svg>
+                    <svg x-show="toastType === 'info'" class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900" x-text="toastMessage"></p>
+                </div>
+                <div class="ml-auto pl-3">
+                    <button @click="showToast = false" class="inline-flex text-gray-400 hover:text-gray-600">
+                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.dataCollectionData = function() {
+            return {
+                classes: {{ classes | tojson | safe }},
+                hasCamera: {{ 'true' if config.camera_id is not none else 'false' }},
+                recentImages: [],
+                capturing: false,
+                showToast: false,
+                toastMessage: '',
+                toastType: 'success',
+                lastCapturedImage: null,
+                
+                async init() {
+                    await this.loadRecentImages();
+                },
+                
+                async loadRecentImages() {
+                    try {
+                        const response = await fetch('/api/recent-images');
+                        const data = await response.json();
+                        this.recentImages = data.images || [];
+                    } catch (error) {
+                        console.error('Error loading recent images:', error);
+                        this.recentImages = [];
+                    }
+                },
+                
+                async captureImage() {
+                    this.capturing = true;
+                    try {
+                        const response = await fetch('/api/capture', {
+                            method: 'POST'
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.lastCapturedImage = data;
+                            this.showToastMessage('Image captured successfully! Please assign a class.', 'success');
+                        } else {
+                            const error = await response.json();
+                            this.showToastMessage(error.detail || 'Failed to capture image', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error capturing image:', error);
+                        this.showToastMessage('Failed to capture image', 'error');
+                    } finally {
+                        this.capturing = false;
+                    }
+                },
+                
+                async assignClassToImage(class_name) {
+                    if (!this.lastCapturedImage) {
+                        this.showToastMessage('No image captured to assign class.', 'error');
+                        return;
+                    }
+
+                    console.log('Assigning class:', class_name, 'to image:', this.lastCapturedImage);
+
+                    try {
+                        // Use the original image_path from the API response
+                        let imagePath = this.lastCapturedImage.image_path;
+                        
+                        // If the path is relative (starts with 'classified/'), we need to find the actual file
+                        if (imagePath.startsWith('classified/')) {
+                            // For reclassification, we need to find the actual file path
+                            const filename = this.getFilenameFromPath(imagePath);
+                            // Try to find the file in the dataset
+                            const response = await fetch(`/api/find-image?filename=${encodeURIComponent(filename)}`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                imagePath = data.image_path;
+                            }
+                        }
+                        
+                        console.log('Using image path:', imagePath);
+                        
+                        const response = await fetch('/api/classify-image', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `image_path=${encodeURIComponent(imagePath)}&class_name=${encodeURIComponent(class_name)}`
+                        });
+
+                        console.log('Response status:', response.status);
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log('Classification result:', result);
+                            this.showToastMessage(`Class changed to: ${class_name}`, 'success');
+                            
+                            // Update the image path to reflect the new location
+                            if (result.new_image_path) {
+                                this.lastCapturedImage.image_path = result.new_image_path;
+                            }
+                            
+                            // Don't clear the image - keep it visible until next capture
+                            await this.loadRecentImages();
+                        } else {
+                            const error = await response.json();
+                            console.error('Classification error:', error);
+                            this.showToastMessage(error.detail || 'Failed to assign class', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error assigning class:', error);
+                        this.showToastMessage('Failed to assign class', 'error');
+                    }
+                },
+
+                skipClassification() {
+                    if (!this.lastCapturedImage) {
+                        this.showToastMessage('No image captured to skip classification.', 'error');
+                        return;
+                    }
+
+                    // Don't clear the image - keep it visible until next capture
+                    this.showToastMessage('Classification skipped for this image.', 'info');
+                },
+                
+                showToastMessage(message, type = 'success') {
+                    this.toastMessage = message;
+                    this.toastType = type;
+                    this.showToast = true;
+                    
+                    setTimeout(() => {
+                        this.showToast = false;
+                    }, 3000);
+                },
+                
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleDateString();
+                },
+                
+                getFilenameFromPath(imagePath) {
+                    if (!imagePath) return '';
+                    return imagePath.split('/').pop();
+                }
+            }
+        }
+    </script>
+</body>
+</html> 

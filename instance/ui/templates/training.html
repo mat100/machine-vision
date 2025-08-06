@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training - {{ config.name }}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="/static/lib/tailwind.min.js"></script>
+    
+    <!-- HTMX -->
+    <script src="/static/lib/htmx.min.js"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="/static/lib/alpine.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/training.css">
+    
+    <!-- Custom JavaScript -->
+    <script src="/static/js/training-alpine.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">{{ config.name }}</h1>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="/" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Dashboard
+                        </a>
+                        <a href="/data-collection" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Data Collection
+                        </a>
+                        <a href="/sorting" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Sorting
+                        </a>
+                        <a href="/training" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Training
+                        </a>
+                        <a href="/production" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            Production
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" x-data="trainingData()">
+        
+        <!-- Loading Overlay -->
+        <div x-show="loading" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                        <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Loading...</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p class="text-sm text-gray-500">Please wait while we load the training data.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">Model Training</h1>
+                <p class="mt-2 text-gray-600">Train and manage your machine learning models</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Total Images -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Images</dt>
+                                    <dd class="text-lg font-medium text-gray-900" x-text="datasetStats.total_images || 0"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Classified Images -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Classified</dt>
+                                    <dd class="text-lg font-medium text-gray-900" x-text="datasetStats.classified_images || 0"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trained Models -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Trained Models</dt>
+                                    <dd class="text-lg font-medium text-gray-900" x-text="models.length || 0"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Model -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-6 w-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-5 w-0 flex-1 min-w-0">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Active Model</dt>
+                                    <dd class="text-sm font-medium text-gray-900 break-words" x-text="activeModelName || 'None'"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div x-show="errorMessage || successMessage" class="mb-6">
+                <div x-show="errorMessage" class="error-message">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-red-800" x-text="errorMessage"></p>
+                        </div>
+                        <div class="ml-auto pl-3">
+                            <div class="-mx-1.5 -my-1.5">
+                                <button @click="clearMessages()" class="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-red-50">
+                                    <span class="sr-only">Dismiss</span>
+                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div x-show="successMessage" class="success-message">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800" x-text="successMessage"></p>
+                        </div>
+                        <div class="ml-auto pl-3">
+                            <div class="-mx-1.5 -my-1.5">
+                                <button @click="clearMessages()" class="inline-flex rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-green-50">
+                                    <span class="sr-only">Dismiss</span>
+                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Configuration and Progress -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Training Configuration -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Training Configuration</h3>
+                    </div>
+                    <div class="p-6">
+                        <form @submit.prevent="startTraining()" x-show="!isTraining">
+                            <!-- Model Architecture -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Model Architecture</label>
+                                <select x-model="trainingConfig.architecture" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="resnet18">ResNet-18</option>
+                                    <option value="resnet34">ResNet-34</option>
+                                    <option value="resnet50">ResNet-50</option>
+                                    <option value="efficientnet_b0">EfficientNet-B0</option>
+                                    <option value="efficientnet_b1">EfficientNet-B1</option>
+                                    <option value="efficientnet_b2">EfficientNet-B2</option>
+                                    <option value="mobilenet_v2">MobileNet-V2</option>
+                                    <option value="mobilenet_v3">MobileNet-V3</option>
+                                </select>
+                            </div>
+
+                            <!-- Epochs -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Epochs</label>
+                                <input type="number" x-model="trainingConfig.epochs" min="1" max="1000" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Learning Rate -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Learning Rate</label>
+                                <input type="number" x-model="trainingConfig.learning_rate" min="0.0001" max="0.1" step="0.0001" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Batch Size -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Batch Size</label>
+                                <input type="number" x-model="trainingConfig.batch_size" min="1" max="128" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <!-- Start Training Button -->
+                            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                                Start Training
+                            </button>
+                        </form>
+
+                        <!-- Training Progress -->
+                        <div x-show="isTraining" class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-700">Training Progress</span>
+                                <span class="text-sm text-gray-500" x-text="`${trainingProgress.current_epoch || 0}/${trainingProgress.total_epochs || 0}`"></span>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                     :style="`width: ${((trainingProgress.current_epoch || 0) / (trainingProgress.total_epochs || 1)) * 100}%`"></div>
+                            </div>
+
+                            <!-- Training Metrics -->
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500">Loss:</span>
+                                    <span class="font-medium" x-text="trainingProgress.current_loss ? trainingProgress.current_loss.toFixed(4) : '-'"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Accuracy:</span>
+                                    <span class="font-medium" x-text="trainingProgress.current_accuracy ? (trainingProgress.current_accuracy * 100).toFixed(2) + '%' : '-'"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Val Loss:</span>
+                                    <span class="font-medium" x-text="trainingProgress.validation_loss ? trainingProgress.validation_loss.toFixed(4) : '-'"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Val Accuracy:</span>
+                                    <span class="font-medium" x-text="trainingProgress.validation_accuracy ? (trainingProgress.validation_accuracy * 100).toFixed(2) + '%' : '-'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Status Message -->
+                            <div class="text-sm text-gray-600" x-text="trainingProgress.message || 'Training in progress...'"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dataset Statistics -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900">Dataset Statistics</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <!-- Class Distribution -->
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-700 mb-3">Class Distribution</h4>
+                                <div class="space-y-2">
+                                    <template x-for="(count, className) in datasetStats.class_distribution" :key="className">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600" x-text="className"></span>
+                                            <span class="text-sm font-medium text-gray-900" x-text="count"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Dataset Size -->
+                            <div class="pt-4 border-t border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Dataset Size</span>
+                                    <span class="text-sm font-medium text-gray-900" x-text="datasetStats.dataset_size_mb ? datasetStats.dataset_size_mb.toFixed(2) + ' MB' : '-'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Training Requirements -->
+                            <div class="pt-4 border-t border-gray-200">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Training Requirements</h4>
+                                <div class="space-y-2 text-sm text-gray-600">
+                                    <div class="flex items-center">
+                                        <svg class="h-4 w-4 mr-2" :class="datasetStats.classified_images >= 10 ? 'text-green-500' : 'text-red-500'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span x-text="`At least 10 classified images (${datasetStats.classified_images || 0}/10)`"></span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <svg class="h-4 w-4 mr-2" :class="Object.keys(datasetStats.class_distribution || {}).length >= 2 ? 'text-green-500' : 'text-red-500'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span x-text="`At least 2 classes (${Object.keys(datasetStats.class_distribution || {}).length}/2)`"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trained Models -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Trained Models</h3>
+                </div>
+                <div class="p-6">
+                    <div x-show="models.length === 0" class="text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No models trained yet</h3>
+                        <p class="mt-1 text-sm text-gray-500">Start training your first model to get started.</p>
+                    </div>
+
+                    <div x-show="models.length > 0" class="space-y-4">
+                        <template x-for="model in models" :key="model.name">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-3">
+                                            <h4 class="text-lg font-medium text-gray-900" x-text="model.name"></h4>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                                                  :class="model.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                                                  x-text="model.is_active ? 'Active' : 'Inactive'"></span>
+                                        </div>
+                                        <div class="mt-1 text-sm text-gray-500">
+                                            <span x-text="model.architecture"></span> • 
+                                            <span x-text="new Date(model.created_at).toLocaleDateString()"></span> • 
+                                            <span x-text="model.file_size ? (model.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'"></span>
+                                        </div>
+                                        <div class="mt-2 flex space-x-4 text-sm">
+                                            <span class="text-gray-600">
+                                                Accuracy: <span class="font-medium" x-text="model.accuracy ? (model.accuracy * 100).toFixed(2) + '%' : 'N/A'"></span>
+                                            </span>
+                                            <span class="text-gray-600">
+                                                Loss: <span class="font-medium" x-text="model.loss ? model.loss.toFixed(4) : 'N/A'"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button @click="activateModel(model.name)" 
+                                                x-show="!model.is_active"
+                                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                            Activate
+                                        </button>
+                                        <button @click="deleteModel(model.name)" 
+                                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html> 
