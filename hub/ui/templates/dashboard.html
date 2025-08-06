@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Machine Vision Hub{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0" x-data="dashboardData()">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p class="mt-2 text-gray-600">Overview of cameras and machine vision instances</p>
+    </div>
+
+    <!-- Stats cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Cameras</dt>
+                            <dd class="text-lg font-medium text-gray-900" x-text="cameras.length"></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Instances</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ instances|length }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Running Instances</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ instances|selectattr('status', 'equalto', 'running')|list|length }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cameras section -->
+    <div class="bg-white shadow rounded-lg mb-8">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Cameras</h3>
+                <button 
+                    @click="refreshCameras()"
+                    :disabled="loading"
+                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span x-text="loading ? 'Refreshing...' : 'Refresh'"></span>
+                </button>
+            </div>
+            
+            <div id="cameras-list">
+                <template x-if="cameras.length > 0">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="camera in cameras" :key="camera.id">
+                            <div class="border rounded-lg p-4" :class="{
+                                'bg-green-50 border-green-200': camera.status === 'available',
+                                'bg-yellow-50 border-yellow-200': camera.status === 'in_use',
+                                'bg-red-50 border-red-200': camera.status === 'error' || camera.status === 'disconnected'
+                            }">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-medium text-gray-900" x-text="camera.name"></h4>
+                                        <p class="text-sm text-gray-500" x-text="`ID: ${camera.id}`"></p>
+                                        <template x-if="camera.resolution">
+                                            <p class="text-sm text-gray-500" x-text="camera.resolution"></p>
+                                        </template>
+                                        <template x-if="camera.assigned_to">
+                                            <p class="text-sm text-blue-600" x-text="`Assigned to: ${camera.assigned_to}`"></p>
+                                        </template>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="{
+                                            'bg-green-100 text-green-800': camera.status === 'available',
+                                            'bg-yellow-100 text-yellow-800': camera.status === 'in_use',
+                                            'bg-red-100 text-red-800': camera.status === 'error' || camera.status === 'disconnected'
+                                        }" x-text="camera.status"></span>
+                                        <button 
+                                            @click="takeSnapshot(camera.id)"
+                                            class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                                            Snapshot
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+                
+                <template x-if="cameras.length === 0">
+                    <div class="text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No cameras found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Connect a USB camera and refresh the list.</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instances section -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Instances</h3>
+                <a href="/instances" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Manage Instances
+                </a>
+            </div>
+            
+            {% if instances %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for instance in instances %}
+                <div class="border rounded-lg p-4 {% if instance.status.value == 'running' %}bg-green-50 border-green-200{% elif instance.status.value == 'stopped' %}bg-gray-50 border-gray-200{% else %}bg-red-50 border-red-200{% endif %}">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-medium text-gray-900">{{ instance.name }}</h4>
+                            <p class="text-sm text-gray-500">Port: {{ instance.port }}</p>
+                            {% if instance.camera_id is not none %}
+                            <p class="text-sm text-blue-600">Camera: {{ instance.camera_id }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if instance.status.value == 'running' %}bg-green-100 text-green-800
+                                {% elif instance.status.value == 'stopped' %}bg-gray-100 text-gray-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ instance.status.value }}
+                            </span>
+                            {% if instance.status.value == 'running' %}
+                            <a href="http://localhost:{{ instance.port }}" target="_blank" class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700">
+                                Open
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No instances</h3>
+                <p class="mt-1 text-sm text-gray-500">Create your first machine vision instance to get started.</p>
+                <div class="mt-6">
+                    <a href="/instances" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        Create Instance
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Snapshot result -->
+    <div id="snapshot-result"></div>
+</div>
+
+<script>
+function dashboardData() {
+    return {
+        cameras: {{ cameras | tojson | safe }},
+        loading: false,
+        
+        async refreshCameras() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/cameras/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    this.cameras = data.cameras;
+                    showToast('Cameras refreshed successfully', 'success');
+                } else {
+                    showToast('Failed to refresh cameras', 'error');
+                }
+            } catch (error) {
+                console.error('Error refreshing cameras:', error);
+                showToast('Error refreshing cameras', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async takeSnapshot(cameraId) {
+            try {
+                const response = await fetch(`/api/cameras/${cameraId}/snapshot`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast(`Snapshot saved: ${data.path}`, 'success');
+                } else {
+                    showToast('Failed to take snapshot', 'error');
+                }
+            } catch (error) {
+                console.error('Error taking snapshot:', error);
+                showToast('Error taking snapshot', 'error');
+            }
+        }
+    }
+}
+</script>
+{% endblock %} 

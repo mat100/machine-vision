@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Instances - Machine Vision Hub{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0" x-data="instancesData()">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Machine Vision Instances</h1>
+        <p class="mt-2 text-gray-600">Create and manage machine vision instances</p>
+    </div>
+
+    <!-- Create Instance Form -->
+    <div class="bg-white shadow rounded-lg mb-8">
+        <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Create New Instance</h3>
+            <form @submit.prevent="createInstance()">
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">Instance Name</label>
+                        <input type="text" id="name" x-model="newInstance.name" required
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="e.g., inspection-line-1">
+                    </div>
+                    
+                    <div>
+                        <label for="port" class="block text-sm font-medium text-gray-700">Port</label>
+                        <input type="number" id="port" x-model="newInstance.port" required min="8000" max="8999"
+                               class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="8001">
+                    </div>
+                    
+                    <div>
+                        <label for="camera_id" class="block text-sm font-medium text-gray-700">Camera ID</label>
+                        <select id="camera_id" x-model="newInstance.camera_id" required
+                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                            <option value="">Select a camera</option>
+                            <template x-for="camera in availableCameras" :key="camera.id">
+                                <option :value="camera.id" x-text="`Camera ${camera.id} - ${camera.name}`"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <button type="submit" 
+                            :disabled="creating"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                        <span x-text="creating ? 'Creating...' : 'Create Instance'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Instances List -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Instances</h3>
+                <button 
+                    @click="refreshInstances()"
+                    :disabled="loading"
+                    class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span x-text="loading ? 'Refreshing...' : 'Refresh'"></span>
+                </button>
+            </div>
+            
+            <div id="instances-list">
+                <template x-if="instances.length > 0">
+                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-300">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Port</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Camera</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-for="instance in instances" :key="instance.name">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="instance.name"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="instance.port"></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <template x-if="instance.camera_id !== null">
+                                                <span x-text="`Camera ${instance.camera_id}`"></span>
+                                            </template>
+                                            <template x-if="instance.camera_id === null">
+                                                <span class="text-gray-400">None</span>
+                                            </template>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="{
+                                                'bg-green-100 text-green-800': instance.status === 'running',
+                                                'bg-yellow-100 text-yellow-800': instance.status === 'stopped',
+                                                'bg-red-100 text-red-800': instance.status === 'error'
+                                            }" x-text="instance.status"></span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                            <template x-if="instance.status === 'stopped'">
+                                                <button @click="startInstance(instance.name)"
+                                                        class="text-green-600 hover:text-green-900">
+                                                    Start
+                                                </button>
+                                            </template>
+                                            <template x-if="instance.status === 'running'">
+                                                <button @click="stopInstance(instance.name)"
+                                                        class="text-yellow-600 hover:text-yellow-900">
+                                                    Stop
+                                                </button>
+                                            </template>
+                                            <button @click="deleteInstance(instance.name)"
+                                                    class="text-red-600 hover:text-red-900">
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+                
+                <template x-if="instances.length === 0">
+                    <div class="text-center py-12">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No instances</h3>
+                        <p class="mt-1 text-sm text-gray-500">Get started by creating a new machine vision instance.</p>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function instancesData() {
+    return {
+        instances: [],
+        availableCameras: [],
+        loading: false,
+        creating: false,
+        newInstance: {
+            name: '',
+            port: 8001,
+            camera_id: ''
+        },
+        
+        async init() {
+            await this.loadInstances();
+            await this.loadCameras();
+            this.autoGeneratePort();
+        },
+        
+        async loadInstances() {
+            try {
+                const response = await fetch('/api/instances');
+                const data = await response.json();
+                this.instances = data.instances;
+            } catch (error) {
+                console.error('Error loading instances:', error);
+                showToast('Error loading instances', 'error');
+            }
+        },
+        
+        async loadCameras() {
+            try {
+                const response = await fetch('/api/cameras');
+                const data = await response.json();
+                // Show all cameras since they can be shared between instances
+                this.availableCameras = data.cameras;
+            } catch (error) {
+                console.error('Error loading cameras:', error);
+            }
+        },
+        
+        autoGeneratePort() {
+            if (this.instances.length > 0) {
+                const maxPort = Math.max(...this.instances.map(i => i.port));
+                this.newInstance.port = maxPort + 1;
+            } else {
+                this.newInstance.port = 8001;
+            }
+        },
+        
+        async refreshInstances() {
+            this.loading = true;
+            try {
+                await this.loadInstances();
+                showToast('Instances refreshed successfully', 'success');
+            } catch (error) {
+                console.error('Error refreshing instances:', error);
+                showToast('Error refreshing instances', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async createInstance() {
+            this.creating = true;
+            try {
+                const response = await fetch('/api/instances', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.newInstance)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    this.instances.push(data.instance);
+                    this.newInstance = {
+                        name: '',
+                        port: 8001,
+                        camera_id: ''
+                    };
+                    this.autoGeneratePort();
+                    await this.loadCameras(); // Refresh available cameras
+                    showToast('Instance created successfully', 'success');
+                } else {
+                    const error = await response.json();
+                    showToast(`Failed to create instance: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error creating instance:', error);
+                showToast('Error creating instance', 'error');
+            } finally {
+                this.creating = false;
+            }
+        },
+        
+        async startInstance(instanceName) {
+            try {
+                const response = await fetch(`/api/instances/${instanceName}/start`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    await this.loadInstances();
+                    showToast(`Instance ${instanceName} started successfully`, 'success');
+                } else {
+                    showToast(`Failed to start instance ${instanceName}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error starting instance:', error);
+                showToast('Error starting instance', 'error');
+            }
+        },
+        
+        async stopInstance(instanceName) {
+            try {
+                const response = await fetch(`/api/instances/${instanceName}/stop`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    await this.loadInstances();
+                    showToast(`Instance ${instanceName} stopped successfully`, 'success');
+                } else {
+                    showToast(`Failed to stop instance ${instanceName}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error stopping instance:', error);
+                showToast('Error stopping instance', 'error');
+            }
+        },
+        
+        async deleteInstance(instanceName) {
+            if (!confirm(`Are you sure you want to delete instance ${instanceName}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/instances/${instanceName}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    this.instances = this.instances.filter(i => i.name !== instanceName);
+                    await this.loadCameras(); // Refresh available cameras
+                    showToast(`Instance ${instanceName} deleted successfully`, 'success');
+                } else {
+                    showToast(`Failed to delete instance ${instanceName}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting instance:', error);
+                showToast('Error deleting instance', 'error');
+            }
+        }
+    }
+}
+</script>
+{% endblock %} 
